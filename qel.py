@@ -20,6 +20,7 @@ Steps
     6a. Check convergence of extremal value and extremising parameters
     6b. Check maximisation trajectory
 """
+from matplotlib import pyplot as plt
 import pennylane as qml
 from pennylane import numpy as np
 
@@ -30,33 +31,56 @@ def train_test_split(X, y, n_test=1):
     return X[train_idxs], y[train_idxs], X[test_idxs], y[test_idxs]
 
 
-def U(x):
-    for i in range(len(x)):
-        qml.RY(2*i*np.arccos(x), wires=i)
-
-
-def W(theta):  # may be different from what implemented in the paper
-    n_qubits = theta.shape[1]
-    qml.BasicEntanglerLayers(theta, wires=range(n_qubits), rotation=qml.RY)
+def cost_mse(preds, y):
+    n_train = len(y)
+    return 1/n_train * np.sum([(pp - yy)**2 for pp, yy in zip(preds, y)])
 
 
 def main():
     np.random.seed = 42
 
     M = 30
-    X = np.random.uniform(low=0., high=1., size=M)
+    x_min = 0.
+    x_max = 1.
+    X = np.random.uniform(low=x_min, high=x_max, size=M, requires_grad=False)
     y = np.sin(5*X)
 
     X_train, y_train, X_test, y_test = train_test_split(X, y, n_test=10)
 
     n_qubits = 3
+
+    def U(x):
+        for i in range(n_qubits):
+            qml.RY(2*i*np.arccos(x), wires=i)
+
+    def W(theta):  # may be different from what implemented in the paper
+        qml.BasicEntanglerLayers(theta, wires=range(n_qubits), rotation=qml.RY)
+
     dev = qml.device('default.qubit', wires=n_qubits)
 
     @qml.qnode(device=dev, interface='autograd')
     def qnn(x, theta):
         U(x)
         W(theta)
-        qml.expval(qml.PauliZ(0) @ qml.PauliX(1) @ qml.PauliX(2))
+        return qml.expval(qml.PauliZ(0) @ qml.PauliX(1) @ qml.PauliX(2))
+
+    # QEL step 1: train the quantum model to reproduce the target function
+    n_layers = 3
+    theta = 0.01 * \
+        np.random.randn(n_layers, n_qubits, requires_grad=True)
+
+    x_grid = np.linspace(x_min, x_max, 100)
+    fig, ax = plt.subplots()
+    ax.scatter(X_train, y_train, edgecolor='k', facecolor='w')
+    ax.plot(x_grid, np.sin(5*x_grid), color='k', linewidth=1)
+    ax.plot(x_grid, qnn(x_grid, theta), color='b', linewidth=1.5)
+    # plt.show()
+
+    opt = qml.AdamOptimizer(stepsize=0.5)
+    n_epochs = 50
+
+    for ep in range(n_epochs):
+        pass
 
 
 if __name__ == '__main__':
