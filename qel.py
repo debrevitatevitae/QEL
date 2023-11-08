@@ -38,11 +38,11 @@ def mse(preds, labels):
 def main():
     np.random.seed(42)
 
-    M = 30
+    n_samples = 30
     x_min = 0.
     x_max = 1.
-    X = np.random.uniform(low=x_min, high=x_max, size=M)
-    # X = np.linspace(x_min, x_max, M)
+    X = np.random.uniform(low=x_min, high=x_max, size=n_samples)
+    # X = np.linspace(x_min, x_max, n_samples)
     y = np.sin(5*X)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.3)
@@ -95,16 +95,17 @@ def main():
     for ep in range(n_epochs):
         theta, _, _ = opt.step(cost_step_1, theta, X_train, y_train)
 
-        print(
-            f"Epoch: {ep:3d} | Train loss: {cost_step_1(theta, X_train, y_train):.4f}")
+        # print(
+        #     f"Epoch: {ep:3d} | Train loss: {cost_step_1(theta, X_train, y_train):.4f}")
 
-    theta_opt = theta
+    print(f"Test MSE = {cost_step_1(theta, X_test, y_test)}")
 
     ax.plot(x_grid, qnn(x_grid, theta), color='g',
             linewidth=1.5, label='final')
     plt.show()
 
     # QEL step 2: find the extremizing value of the learned model
+    theta_opt = theta
 
     def cost_step_2(x):
         return -qnn(x, theta_opt)[0]
@@ -117,7 +118,7 @@ def main():
         x = opt.step(cost_step_2, x)
 
         print(
-            f"Epoch: {ep:3d} | Current extemiser: {x[0]} | Model value: {-cost_step_2(x)}")
+            f"Epoch: {ep:3d} | Current extremiser: {x[0]:.4f} | Model value: {-cost_step_2(x):.4f}")
 
 
 if __name__ == '__main__':
