@@ -20,32 +20,32 @@ Steps
     6a. Check convergence of extremal value and extremising parameters
     6b. Check maximisation trajectory
 """
+import sys
 from matplotlib import pyplot as plt
 import pennylane as qml
 from pennylane import numpy as np
+from sklearn.model_selection import train_test_split
 
 
-def train_test_split(X, y, n_test=1):
-    test_idxs = np.random.choice(len(y), size=n_test, replace=False)
-    train_idxs = np.setdiff1d(np.arange(len(y)), test_idxs)
-    return X[train_idxs], y[train_idxs], X[test_idxs], y[test_idxs]
-
-
-def cost_mse(preds, y):
-    n_train = len(y)
-    return 1/n_train * np.sum([(pp - yy)**2 for pp, yy in zip(preds, y)])
+def mse(preds, labels):
+    n = len(labels)
+    loss = 0.
+    for pp, ll in zip(preds, labels):
+        loss += (pp-ll)**2
+    return 1/n*loss
 
 
 def main():
-    np.random.seed = 42
+    np.random.seed(42)
 
     M = 30
     x_min = 0.
     x_max = 1.
-    X = np.random.uniform(low=x_min, high=x_max, size=M, requires_grad=False)
+    X = np.random.uniform(low=x_min, high=x_max, size=M)
+    # X = np.linspace(x_min, x_max, M)
     y = np.sin(5*X)
 
-    X_train, y_train, X_test, y_test = train_test_split(X, y, n_test=10)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.3)
 
     n_qubits = 3
 
@@ -53,34 +53,57 @@ def main():
         for i in range(n_qubits):
             qml.RY(2*i*np.arccos(x), wires=i)
 
+    def layer(theta_i):
+        for j in range(n_qubits):
+            qml.Rot(theta_i[j, 0], theta_i[j, 1], theta_i[j, 2], wires=j)
+        qml.broadcast(unitary=qml.CNOT, pattern="ring",
+                      wires=range(n_qubits))
+
+    n_layers = 3
+
     def W(theta):  # may be different from what implemented in the paper
-        qml.BasicEntanglerLayers(theta, wires=range(n_qubits), rotation=qml.RY)
+        for theta_i in theta:
+            layer(theta_i)
 
     dev = qml.device('default.qubit', wires=n_qubits)
 
-    @qml.qnode(device=dev, interface='autograd')
+    @qml.qnode(device=dev, interface="autograd")
     def qnn(x, theta):
         U(x)
         W(theta)
-        return qml.expval(qml.PauliZ(0) @ qml.PauliX(1) @ qml.PauliX(2))
+        return qml.expval(qml.PauliZ(0) @ qml.PauliZ(1) @ qml.PauliZ(2))
+
+    def cost(theta, x, y):
+        preds = qnn(x, theta)
+        return mse(preds, y)
 
     # QEL step 1: train the quantum model to reproduce the target function
-    n_layers = 3
-    theta = 0.01 * \
-        np.random.randn(n_layers, n_qubits, requires_grad=True)
+    theta = .01 * np.random.randn(n_layers, n_qubits, 3, requires_grad=True)
+    # qml.draw_mpl(qnn)(X_train[0], theta)
 
-    x_grid = np.linspace(x_min, x_max, 100)
+    x_grid = np.linspace(x_min, x_max, 100, requires_grad=False)
     fig, ax = plt.subplots()
     ax.scatter(X_train, y_train, edgecolor='k', facecolor='w')
-    ax.plot(x_grid, np.sin(5*x_grid), color='k', linewidth=1)
-    ax.plot(x_grid, qnn(x_grid, theta), color='b', linewidth=1.5)
+    ax.plot(x_grid, np.sin(5*x_grid), color='k',
+            linewidth=1, label='ground truth')
+    ax.plot(x_grid, qnn(x_grid, theta), color='b',
+            linewidth=1.5, label='initial')
     # plt.show()
 
     opt = qml.AdamOptimizer(stepsize=0.5)
-    n_epochs = 50
+    n_epochs = 100
 
+    # print(cost_mse(theta, X_train, X_test).requires_grad)
     for ep in range(n_epochs):
-        pass
+        theta, _, _ = opt.step(cost, theta, X_train, y_train)
+
+        print(
+            f"Epoch: {ep:3d} | Train loss: {cost(theta, X_train, y_train):.4f}")
+
+    ax.plot(x_grid, qnn(x_grid, theta), color='g',
+            linewidth=1.5, label='final')
+
+    plt.show()
 
 
 if __name__ == '__main__':
