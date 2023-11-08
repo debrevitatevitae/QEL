@@ -73,7 +73,7 @@ def main():
         W(theta)
         return qml.expval(qml.PauliZ(0) @ qml.PauliZ(1) @ qml.PauliZ(2))
 
-    def cost(theta, x, y):
+    def cost_step_1(theta, x, y):
         preds = qnn(x, theta)
         return mse(preds, y)
 
@@ -88,22 +88,36 @@ def main():
             linewidth=1, label='ground truth')
     ax.plot(x_grid, qnn(x_grid, theta), color='b',
             linewidth=1.5, label='initial')
-    # plt.show()
 
     opt = qml.AdamOptimizer(stepsize=0.5)
     n_epochs = 100
 
-    # print(cost_mse(theta, X_train, X_test).requires_grad)
     for ep in range(n_epochs):
-        theta, _, _ = opt.step(cost, theta, X_train, y_train)
+        theta, _, _ = opt.step(cost_step_1, theta, X_train, y_train)
 
         print(
-            f"Epoch: {ep:3d} | Train loss: {cost(theta, X_train, y_train):.4f}")
+            f"Epoch: {ep:3d} | Train loss: {cost_step_1(theta, X_train, y_train):.4f}")
+
+    theta_opt = theta
 
     ax.plot(x_grid, qnn(x_grid, theta), color='g',
             linewidth=1.5, label='final')
-
     plt.show()
+
+    # QEL step 2: find the extremizing value of the learned model
+
+    def cost_step_2(x):
+        return -qnn(x, theta_opt)[0]
+
+    opt = qml.AdamOptimizer(stepsize=0.5)
+    n_epochs = 50
+    x = np.random.uniform(x_min, x_max, size=(1,), requires_grad=True)
+
+    for ep in range(n_epochs):
+        x = opt.step(cost_step_2, x)
+
+        print(
+            f"Epoch: {ep:3d} | Current extemiser: {x[0]} | Model value: {-cost_step_2(x)}")
 
 
 if __name__ == '__main__':
