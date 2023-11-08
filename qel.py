@@ -30,14 +30,33 @@ def train_test_split(X, y, n_test=1):
     return X[train_idxs], y[train_idxs], X[test_idxs], y[test_idxs]
 
 
+def U(x):
+    for i in range(len(x)):
+        qml.RY(2*i*np.arccos(x), wires=i)
+
+
+def W(theta):  # may be different from what implemented in the paper
+    n_qubits = theta.shape[1]
+    qml.BasicEntanglerLayers(theta, wires=range(n_qubits), rotation=qml.RY)
+
+
 def main():
     np.random.seed = 42
 
     M = 30
-    X = np.random.uniform(low=0., high=1., size=M).reshape(-1, 1)
-    y = np.sin(5*X).reshape(X.shape[0],)
+    X = np.random.uniform(low=0., high=1., size=M)
+    y = np.sin(5*X)
 
     X_train, y_train, X_test, y_test = train_test_split(X, y, n_test=10)
+
+    n_qubits = 3
+    dev = qml.device('default.qubit', wires=n_qubits)
+
+    @qml.qnode(device=dev, interface='autograd')
+    def qnn(x, theta):
+        U(x)
+        W(theta)
+        qml.expval(qml.PauliZ(0) @ qml.PauliX(1) @ qml.PauliX(2))
 
 
 if __name__ == '__main__':
