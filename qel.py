@@ -29,8 +29,10 @@ from sklearn.model_selection import train_test_split
 
 
 OUTPUT_PATH = Path() / "output"
+
 SAVE_COST_TRAINING = False
-SAVE_MODEL_TRAINING = True
+SAVE_MODEL_TRAINING = False
+SAVE_EXTREMAL_FINDING = False
 
 
 def mse(preds, labels):
