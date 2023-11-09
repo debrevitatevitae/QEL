@@ -31,12 +31,9 @@ from sklearn.model_selection import train_test_split
 from project_directories import PICKLE_PATH
 OUTPUT_PATH = Path() / "output"
 
-SAVE_COST_TRAINING = False
-SAVE_MODEL_TRAINING = True
-SAVE_EXTREMAL_FINDING = False
-
 
 def mse(preds, labels):
+
     n = len(labels)
     loss = 0.
     for pp, ll in zip(preds, labels):
@@ -45,6 +42,10 @@ def mse(preds, labels):
 
 
 def main():
+    SAVE_COST_TRAINING = False
+    SAVE_MODEL_TRAINING = False
+    SAVE_EXTREMAL_FINDING = True
+
     np.random.seed(42)
 
     n_samples = 30
@@ -91,12 +92,6 @@ def main():
     # qml.draw_mpl(qnn)(X_train[0], theta)
 
     x_grid = np.linspace(x_min, x_max, 50, requires_grad=False)
-    # fig, ax = plt.subplots()
-    # ax.scatter(X_train, y_train, edgecolor='k', facecolor='w')
-    # ax.plot(x_grid, np.sin(5*x_grid), color='k',
-    #         linewidth=1, label='ground truth')
-    # ax.plot(x_grid, qnn(x_grid, theta), color='b',
-    #         linewidth=1.5, label='initial')
 
     opt = qml.AdamOptimizer(stepsize=0.5)
     n_epochs = 100
@@ -111,11 +106,6 @@ def main():
         print(
             f"Epoch: {ep:3d} | Train loss: {cost_step_1(theta, X_train, y_train):.4f}")
 
-    # ax.plot(x_grid, qnn(x_grid, theta), color='g',
-    #         linewidth=1.5, label='final')
-    # fig.tight_layout()
-    # plt.show()
-    # plt.close(fig)
     print(f"Test MSE = {cost_step_1(theta, X_test, y_test)}")
 
     if SAVE_COST_TRAINING:
@@ -143,13 +133,27 @@ def main():
 
     opt = qml.AdamOptimizer(stepsize=0.5)
     n_epochs = 50
-    x = np.random.uniform(x_min, x_max, size=(1,), requires_grad=True)
+    x = np.random.uniform(x_min, x_max, size=(
+        1,), requires_grad=True)  # initial guess
 
-    for ep in range(n_epochs):
+    x_opt_iters = [x[0]]
+    f_opt_iters = [qnn(x, theta_opt)[0]]
+
+    for ep in range(n_epochs-1):
         x = opt.step(cost_step_2, x)
+        x_opt_iters.append(x[0])
+        f_opt_iters.append(qnn(x, theta_opt)[0])
 
         print(
             f"Epoch: {ep:3d} | Current extremiser: {x[0]:.4f} | Model value: {-cost_step_2(x):.4f}")
+
+    if SAVE_EXTREMAL_FINDING:
+        with open(PICKLE_PATH / 'qnn_on_grid.pkl', 'wb') as f:
+            pickle.dump(qnn(x_grid, theta_opt), f)
+        with open(PICKLE_PATH / 'extremizer_iters.pkl', 'wb') as f:
+            pickle.dump(x_opt_iters, f)
+        with open(PICKLE_PATH / 'extreme_val_iters.pkl', 'wb') as f:
+            pickle.dump(f_opt_iters, f)
 
 
 if __name__ == '__main__':
