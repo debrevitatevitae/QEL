@@ -44,7 +44,7 @@ def mse(preds, labels):
 def main():
     SAVE_COST_TRAINING = False
     SAVE_MODEL_TRAINING = False
-    SAVE_EXTREMAL_FINDING = True
+    SAVE_EXTREMAL_FINDING = False
 
     np.random.seed(42)
 
