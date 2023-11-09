@@ -32,7 +32,7 @@ from project_directories import PICKLE_PATH
 OUTPUT_PATH = Path() / "output"
 
 SAVE_COST_TRAINING = False
-SAVE_MODEL_TRAINING = False
+SAVE_MODEL_TRAINING = True
 SAVE_EXTREMAL_FINDING = False
 
 
@@ -91,12 +91,12 @@ def main():
     # qml.draw_mpl(qnn)(X_train[0], theta)
 
     x_grid = np.linspace(x_min, x_max, 50, requires_grad=False)
-    fig, ax = plt.subplots()
-    ax.scatter(X_train, y_train, edgecolor='k', facecolor='w')
-    ax.plot(x_grid, np.sin(5*x_grid), color='k',
-            linewidth=1, label='ground truth')
-    ax.plot(x_grid, qnn(x_grid, theta), color='b',
-            linewidth=1.5, label='initial')
+    # fig, ax = plt.subplots()
+    # ax.scatter(X_train, y_train, edgecolor='k', facecolor='w')
+    # ax.plot(x_grid, np.sin(5*x_grid), color='k',
+    #         linewidth=1, label='ground truth')
+    # ax.plot(x_grid, qnn(x_grid, theta), color='b',
+    #         linewidth=1.5, label='initial')
 
     opt = qml.AdamOptimizer(stepsize=0.5)
     n_epochs = 100
@@ -111,11 +111,12 @@ def main():
         print(
             f"Epoch: {ep:3d} | Train loss: {cost_step_1(theta, X_train, y_train):.4f}")
 
-    ax.plot(x_grid, qnn(x_grid, theta), color='g',
-            linewidth=1.5, label='final')
-    fig.tight_layout()
-    plt.show()
-    plt.close(fig)
+    # ax.plot(x_grid, qnn(x_grid, theta), color='g',
+    #         linewidth=1.5, label='final')
+    # fig.tight_layout()
+    # plt.show()
+    # plt.close(fig)
+    print(f"Test MSE = {cost_step_1(theta, X_test, y_test)}")
 
     if SAVE_COST_TRAINING:
         epochs = list(range(n_epochs))
@@ -125,10 +126,14 @@ def main():
             pickle.dump(training_losses, f)
 
     if SAVE_MODEL_TRAINING:
+        with open(PICKLE_PATH / 'X_train.pkl', 'wb') as f:
+            pickle.dump(X_train, f)
+        with open(PICKLE_PATH / 'y_train.pkl', 'wb') as f:
+            pickle.dump(y_train, f)
+        with open(PICKLE_PATH / 'x_grid.pkl', 'wb') as f:
+            pickle.dump(x_grid, f)
         with open(PICKLE_PATH / 'model_preds_training.pkl', 'wb') as f:
             pickle.dump(model_preds, f)
-
-    print(f"Test MSE = {cost_step_1(theta, X_test, y_test)}")
 
     # QEL step 2: find the extremizing value of the learned model
     theta_opt = theta
