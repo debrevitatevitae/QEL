@@ -87,7 +87,7 @@ def main():
     theta = .01 * np.random.randn(n_layers, n_qubits, 3, requires_grad=True)
     # qml.draw_mpl(qnn)(X_train[0], theta)
 
-    x_grid = np.linspace(x_min, x_max, 100, requires_grad=False)
+    x_grid = np.linspace(x_min, x_max, 50, requires_grad=False)
     fig, ax = plt.subplots()
     ax.scatter(X_train, y_train, edgecolor='k', facecolor='w')
     ax.plot(x_grid, np.sin(5*x_grid), color='k',
@@ -107,11 +107,11 @@ def main():
 
     ax.plot(x_grid, qnn(x_grid, theta), color='g',
             linewidth=1.5, label='final')
-    # fig.tight_layout()
-    # fig.savefig(OUTPUT_PATH / "qel_sin5x_after_training.pdf")
+    fig.tight_layout()
+    plt.show()
     plt.close(fig)
 
-    if SAVE_TRAINING:
+    if SAVE_COST_TRAINING:
         fig, ax = plt.subplots()
         epochs = list(range(n_epochs))
         line = ax.plot(epochs[0], training_losses[0],
