@@ -101,10 +101,13 @@ def main():
     opt = qml.AdamOptimizer(stepsize=0.5)
     n_epochs = 100
     training_losses = [cost_step_1(theta, X_train, y_train)]
+    model_preds = [qnn(x_grid, theta)]
 
     for ep in range(n_epochs-1):
         theta, _, _ = opt.step(cost_step_1, theta, X_train, y_train)
         training_losses.append(cost_step_1(theta, X_train, y_train))
+        model_preds.append(qnn(x_grid, theta))
+
         print(
             f"Epoch: {ep:3d} | Train loss: {cost_step_1(theta, X_train, y_train):.4f}")
 
@@ -120,6 +123,10 @@ def main():
             pickle.dump(epochs, f)
         with open(PICKLE_PATH / 'cost_mse.pkl', 'wb') as f:
             pickle.dump(training_losses, f)
+
+    if SAVE_MODEL_TRAINING:
+        with open(PICKLE_PATH / 'model_preds_training.pkl', 'wb') as f:
+            pickle.dump(model_preds, f)
 
     print(f"Test MSE = {cost_step_1(theta, X_test, y_test)}")
 
