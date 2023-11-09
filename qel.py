@@ -21,13 +21,14 @@ Steps
     6b. Check maximisation trajectory
 """
 from pathlib import Path
+import pickle
 
 from matplotlib import animation, pyplot as plt
 import pennylane as qml
 from pennylane import numpy as np
 from sklearn.model_selection import train_test_split
 
-
+from project_directories import PICKLE_PATH
 OUTPUT_PATH = Path() / "output"
 
 SAVE_COST_TRAINING = False
@@ -114,28 +115,11 @@ def main():
     plt.close(fig)
 
     if SAVE_COST_TRAINING:
-        fig, ax = plt.subplots()
         epochs = list(range(n_epochs))
-        line = ax.plot(epochs[0], training_losses[0],
-                       color='k', linewidth=1.5)[0]
-        ax.set_xlim([0, n_epochs])
-        ax.set_ylim([0, 1])
-        ax.set_xlabel("Epoch")
-        ax.set_ylabel("Training MSE")
-        ax.set_title("QNN learning of f(x)=sin(5x)")
-        ax.grid()
-
-        def animation_step(frame):
-            line.set_xdata(epochs[:frame])
-            line.set_ydata(training_losses[:frame])
-            return line
-
-        fig.tight_layout()
-        ani = animation.FuncAnimation(
-            fig=fig, func=animation_step, frames=n_epochs, interval=50)
-        ani.save(OUTPUT_PATH/"qel_sin5x_training_curve.mp4",
-                 writer='ffmpeg')
-        plt.close(fig)
+        with open(PICKLE_PATH / 'epochs.pkl', 'wb') as f:
+            pickle.dump(epochs, f)
+        with open(PICKLE_PATH / 'cost_mse.pkl', 'wb') as f:
+            pickle.dump(training_losses, f)
 
     print(f"Test MSE = {cost_step_1(theta, X_test, y_test)}")
 
