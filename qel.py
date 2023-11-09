@@ -20,11 +20,17 @@ Steps
     6a. Check convergence of extremal value and extremising parameters
     6b. Check maximisation trajectory
 """
-import sys
-from matplotlib import pyplot as plt
+from pathlib import Path
+
+from matplotlib import animation, pyplot as plt
 import pennylane as qml
 from pennylane import numpy as np
 from sklearn.model_selection import train_test_split
+
+
+OUTPUT_PATH = Path() / "output"
+SAVE_COST_TRAINING = False
+SAVE_MODEL_TRAINING = True
 
 
 def mse(preds, labels):
@@ -91,18 +97,45 @@ def main():
 
     opt = qml.AdamOptimizer(stepsize=0.5)
     n_epochs = 100
+    training_losses = [cost_step_1(theta, X_train, y_train)]
 
-    for ep in range(n_epochs):
+    for ep in range(n_epochs-1):
         theta, _, _ = opt.step(cost_step_1, theta, X_train, y_train)
-
-        # print(
-        #     f"Epoch: {ep:3d} | Train loss: {cost_step_1(theta, X_train, y_train):.4f}")
-
-    print(f"Test MSE = {cost_step_1(theta, X_test, y_test)}")
+        training_losses.append(cost_step_1(theta, X_train, y_train))
+        print(
+            f"Epoch: {ep:3d} | Train loss: {cost_step_1(theta, X_train, y_train):.4f}")
 
     ax.plot(x_grid, qnn(x_grid, theta), color='g',
             linewidth=1.5, label='final')
-    plt.show()
+    # fig.tight_layout()
+    # fig.savefig(OUTPUT_PATH / "qel_sin5x_after_training.pdf")
+    plt.close(fig)
+
+    if SAVE_TRAINING:
+        fig, ax = plt.subplots()
+        epochs = list(range(n_epochs))
+        line = ax.plot(epochs[0], training_losses[0],
+                       color='k', linewidth=1.5)[0]
+        ax.set_xlim([0, n_epochs])
+        ax.set_ylim([0, 1])
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("Training MSE")
+        ax.set_title("QNN learning of f(x)=sin(5x)")
+        ax.grid()
+
+        def animation_step(frame):
+            line.set_xdata(epochs[:frame])
+            line.set_ydata(training_losses[:frame])
+            return line
+
+        fig.tight_layout()
+        ani = animation.FuncAnimation(
+            fig=fig, func=animation_step, frames=n_epochs, interval=50)
+        ani.save(OUTPUT_PATH/"qel_sin5x_training_curve.mp4",
+                 writer='ffmpeg')
+        plt.close(fig)
+
+    print(f"Test MSE = {cost_step_1(theta, X_test, y_test)}")
 
     # QEL step 2: find the extremizing value of the learned model
     theta_opt = theta
